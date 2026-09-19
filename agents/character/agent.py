@@ -1,5 +1,6 @@
 from __future__ import annotations
-
+from config.settings import settings
+from langchain_google_genai import ChatGoogleGenerativeAI
 from agents.shared import AgentResult, CharacterRequest
 from tools.character_memory import get_character_knowledge
 from tools.story_search import search_story
@@ -9,7 +10,11 @@ from tools.world_state import get_world_state
 class CharacterAgent:
 
     def __init__(self, llm=None):
-        self.llm = llm
+        self.llm = llm or ChatGoogleGenerativeAI(
+        model=settings.llm_model,
+        google_api_key=settings.gemini_api_key,
+        temperature=0.7,
+    )
 
     def respond(
         self,
@@ -62,22 +67,13 @@ class CharacterAgent:
             "user_message": request.message,
         }
 
-        if self.llm is None:
-            return AgentResult(
-                success=True,
-                output=self._fallback_response(character.name),
-                metadata={
-                    "context": context,
-                },
-            )
-
         response = self.llm.invoke(
             self._build_prompt(context)
         )
 
         return AgentResult(
             success=True,
-            output=str(response),
+            output=response.content,
             metadata={
                 "character_id": character.id,
                 "sequence": request.sequence,
@@ -87,14 +83,26 @@ class CharacterAgent:
     def _build_prompt(self, context: dict) -> str:
         return f"""
 Character: {context["character"]}
-Known facts: {context["knowledge"]}
-Source evidence: {context["source_evidence"]}
-Timeline sequence: {context["sequence"]}
 
-User: {context["user_message"]}
+Known facts:
+{context["knowledge"]}
+
+Source evidence:
+{context["source_evidence"]}
+
+Timeline sequence:
+{context["sequence"]}
+
+User:
+{context["user_message"]}
 
 Respond strictly as the character.
-Do not reveal information learned after this timeline point.
+
+Rules:
+- Stay consistent with the character's personality.
+- Use only knowledge available to the character at this timeline point.
+- Do not reveal information learned after this timeline point.
+- Do not invent canon facts when the source evidence does not support them.
 """
 
     def _fallback_response(self, name: str) -> str:

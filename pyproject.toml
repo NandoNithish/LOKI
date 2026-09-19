@@ -1,1 +1,31 @@
-"langgraph",
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "re-world"
+version = "0.1.0"
+description = "Agentic story-world simulator"
+requires-python = ">=3.10"
+
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "pydantic",
+    "pydantic-settings",
+    "sqlalchemy",
+    "langgraph",
+    "pypdf",
+    "python-docx",
+    "python-multipart",
+]
+
+[tool.setuptools.packages.find]
+include = [
+    "apps*",
+    "agents*",
+    "core*",
+    "config*",
+    "database*",
+    "ingestion*",
+]

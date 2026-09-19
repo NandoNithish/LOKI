@@ -7,8 +7,9 @@ class Settings(BaseSettings):
 
     database_url: str = "sqlite:///./reworld.db"
 
-    llm_api_key: str = ""
-    llm_model: str = "gpt-5.6"
+    openai_api_key: str = ""
+    gemini_api_key: str = ""
+    llm_model: str = "gemini-3.6-flash"
 
     model_config = SettingsConfigDict(
         env_file=".env",
