@@ -3,29 +3,54 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "re-world"
+name = "reworld"
 version = "0.1.0"
-description = "Agentic story-world simulator"
+description = "Re:World - Multi-Agent Narrative Framework"
 requires-python = ">=3.10"
-
 dependencies = [
-    "fastapi",
-    "uvicorn",
-    "pydantic",
-    "pydantic-settings",
-    "sqlalchemy",
     "langgraph",
+    "langchain",
+    "langchain-google-genai",
+    "python-dotenv",
+    "pydantic>=2.0",
+    "pydantic-settings>=2.0",
+    "fastapi>=0.100",
+    "uvicorn[standard]",
+    "sqlalchemy>=2.0",
+    "python-multipart",
     "pypdf",
     "python-docx",
-    "python-multipart",
+    "aiofiles",
+]
+
+[project.optional-dependencies]
+postgres = [
+    "psycopg2-binary",
+    "pgvector",
+]
+dev = [
+    "pytest",
+    "httpx",
+    "ruff",
 ]
 
 [tool.setuptools.packages.find]
 include = [
-    "apps*",
     "agents*",
-    "core*",
+    "apps*",
     "config*",
+    "core*",
     "database*",
     "ingestion*",
+    "tools*",
+    "prompts*",
+    "scripts*",
 ]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+

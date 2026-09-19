@@ -1,13 +1,26 @@
+# Environment
 .env
 .env.*
 !.env.example
+.env.local
+.env.production
 
-*.db
-__pycache__/
-*.pyc
+# Python
 .venv/
 venv/
+__pycache__/
+*.pyc
+*.pyo
 *.egg-info/
+dist/
+build/
+*.egg
+.pytest_cache/
+.ruff_cache/
+
+# Database
+*.db
+*.sqlite3
 
 # Google/Gemini credentials
 service-account*.json
@@ -18,3 +31,21 @@ token*.json
 # Logs and local secrets
 *.log
 .secrets/
+uploads/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node / Frontend
+node_modules/
+.next/
+out/
+.turbo/
+

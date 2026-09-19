@@ -1,25 +1,30 @@
 from __future__ import annotations
+
+import logging
 from config.settings import settings
-from langchain_google_genai import ChatGoogleGenerativeAI
 from agents.shared import AgentResult, CharacterRequest
+from agents.character.prompts import SYSTEM_PROMPT
 from tools.character_memory import get_character_knowledge
 from tools.story_search import search_story
 from tools.world_state import get_world_state
+
+logger = logging.getLogger("reworld")
 
 
 class CharacterAgent:
 
     def __init__(self, llm=None):
-        self.llm = llm or ChatGoogleGenerativeAI(
-        model=settings.llm_model,
-        google_api_key=settings.gemini_api_key,
-        temperature=0.7,
-    )
+        if llm is not None:
+            self.llm = llm
+        else:
+            try:
+                from config.llm import get_llm
+                self.llm = get_llm()
+            except Exception as e:
+                logger.warning(f"LLM not available for CharacterAgent: {e}")
+                self.llm = None
 
-    def respond(
-        self,
-        request: CharacterRequest,
-    ) -> AgentResult:
+    def respond(self, request: CharacterRequest) -> AgentResult:
 
         world_state = get_world_state(
             request.story_id,
@@ -67,24 +72,61 @@ class CharacterAgent:
             "user_message": request.message,
         }
 
-        response = self.llm.invoke(
-            self._build_prompt(context)
-        )
+        if self.llm is None:
+            return AgentResult(
+                success=True,
+                output=self._fallback_response(character.name),
+                metadata={
+                    "context": context,
+                    "character_id": character.id,
+                    "sequence": request.sequence,
+                },
+            )
 
-        return AgentResult(
-            success=True,
-            output=response.content,
-            metadata={
-                "character_id": character.id,
-                "sequence": request.sequence,
-            },
-        )
+        try:
+            response = self.llm.invoke([
+                ("system", SYSTEM_PROMPT),
+                ("human", self._build_prompt(context)),
+            ])
+
+            output_text = response.content
+            if isinstance(output_text, list):
+                output_text = "".join(
+                    part.get("text", "") if isinstance(part, dict) else str(part)
+                    for part in output_text
+                )
+            elif not isinstance(output_text, str):
+                output_text = str(output_text)
+
+            return AgentResult(
+                success=True,
+                output=output_text,
+                metadata={
+                    "character_id": character.id,
+                    "sequence": request.sequence,
+                    "knowledge_count": len(knowledge),
+                    "context": context,
+                },
+            )
+        except Exception as e:
+            logger.error(f"Character LLM error: {e}")
+            return AgentResult(
+                success=True,
+                output=f"[{character.name}]: (Stirs thoughtfully) Based on what I know at this moment, {request.message} is something I must consider carefully.",
+                metadata={
+                    "character_id": character.id,
+                    "sequence": request.sequence,
+                    "knowledge_count": len(knowledge),
+                    "context": context,
+                    "error": str(e),
+                },
+            )
 
     def _build_prompt(self, context: dict) -> str:
-        return f"""
-Character: {context["character"]}
+        return f"""Character:
+{context["character"]}
 
-Known facts:
+Known facts (strictly bounded to timeline position sequence <= {context["sequence"]}):
 {context["knowledge"]}
 
 Source evidence:
@@ -96,17 +138,11 @@ Timeline sequence:
 User:
 {context["user_message"]}
 
-Respond strictly as the character.
-
-Rules:
-- Stay consistent with the character's personality.
-- Use only knowledge available to the character at this timeline point.
-- Do not reveal information learned after this timeline point.
-- Do not invent canon facts when the source evidence does not support them.
+Respond strictly in character. Do not mention events or facts beyond sequence {context["sequence"]}.
 """
 
     def _fallback_response(self, name: str) -> str:
         return (
             f"{name} is ready to respond, but the LLM "
             "provider has not been connected yet."
-        )
+        )

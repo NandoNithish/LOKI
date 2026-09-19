@@ -11,7 +11,10 @@ def create_branch(
     name: str,
     description: str = "",
     divergence_event_id: str | None = None,
+    divergence_sequence: int | None = None,
 ) -> Branch:
+
+    seq = divergence_sequence if divergence_sequence is not None else world_state.current_point.sequence
 
     branch = Branch(
         id=str(uuid.uuid4()),
@@ -20,7 +23,7 @@ def create_branch(
         description=description,
         parent_branch_id=world_state.branch_id,
         divergence_event_id=divergence_event_id,
-        divergence_sequence=world_state.current_point.sequence,
+        divergence_sequence=seq,
     )
 
     _branches[branch.id] = branch
@@ -38,4 +41,5 @@ def clone_world_state(
 ) -> WorldState:
     cloned = deepcopy(world_state)
     cloned.branch_id = branch.id
-    return cloned
+    cloned.current_point.sequence = branch.divergence_sequence
+    return cloned
